@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  analyst:
+    build: .
+    container_name: the-analyst
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
+      - DATABASE_URL=postgresql://analyst:analyst_password@db:5432/analyst
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./data:/app/data
+      - ./memory:/app/memory
+      - ./src:/app/src
+    depends_on:
+      - db
+    stdin_open: true
+    tty: true
+
+  db:
+    image: postgres:15-alpine
+    container_name: analyst-db
+    environment:
+      - POSTGRES_USER=analyst
+      - POSTGRES_PASSWORD=analyst_password
+      - POSTGRES_DB=analyst
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:

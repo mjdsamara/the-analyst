@@ -1,0 +1,159 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Run Black
+        run: black --check src/ tests/
+
+      - name: Run Ruff
+        run: ruff check src/ tests/
+
+      - name: Run MyPy
+        run: mypy src/
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: analyst
+          POSTGRES_PASSWORD: analyst_password
+          POSTGRES_DB: analyst_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Run Tests with Coverage
+        env:
+          ANTHROPIC_API_KEY: test-key-for-ci
+          HUGGINGFACE_TOKEN: test-token
+          DATABASE_URL: postgresql://analyst:analyst_password@localhost:5432/analyst_test
+        run: pytest --cov=src --cov-report=xml --cov-fail-under=84
+
+      - name: Upload Coverage to Codecov
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: true
+          flags: unittests
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  mutation-testing:
+    runs-on: ubuntu-latest
+    needs: test
+    # Run mutation testing on main branch only (computationally expensive)
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Run Mutation Testing on Critical Agents
+        env:
+          ANTHROPIC_API_KEY: test-key-for-ci
+          HUGGINGFACE_TOKEN: test-token
+        run: |
+          # Run mutation testing on agents (most critical code)
+          # Initial threshold: 60% mutation score
+          mutmut run --paths-to-mutate=src/agents/ --no-progress || true
+          mutmut results
+          # Check if mutation score meets threshold
+          SURVIVED=$(mutmut results 2>/dev/null | grep -oP 'survived: \K\d+' || echo "0")
+          KILLED=$(mutmut results 2>/dev/null | grep -oP 'killed: \K\d+' || echo "0")
+          TOTAL=$((SURVIVED + KILLED))
+          if [ "$TOTAL" -gt 0 ]; then
+            SCORE=$((KILLED * 100 / TOTAL))
+            echo "Mutation Score: ${SCORE}%"
+            if [ "$SCORE" -lt 60 ]; then
+              echo "::warning::Mutation score ${SCORE}% is below 60% threshold"
+            fi
+          fi
+
+  boris-compliance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Boris Compliance Check
+        run: |
+          chmod +x ./scripts/verify-boris-compliance.sh
+          ./scripts/verify-boris-compliance.sh
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install security tools
+        run: pip install bandit safety
+
+      - name: Run Bandit Security Scan
+        run: bandit -r src/ -c pyproject.toml
+
+      - name: Check for Vulnerabilities
+        run: |
+          pip install uv
+          uv pip install --system -e "."
+          safety check --full-report || true

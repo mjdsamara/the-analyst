@@ -1,0 +1,68 @@
+# Codecov configuration for The Analyst
+# Blocks PRs that decrease coverage
+
+codecov:
+  require_ci_to_pass: true
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+  status:
+    project:
+      default:
+        target: 85%
+        threshold: 1%
+        informational: false
+        # Block PR if project coverage drops below threshold
+        if_ci_failed: error
+
+    patch:
+      default:
+        target: 80%
+        threshold: 0%
+        informational: false
+        # Block PR if new code doesn't meet coverage threshold
+        if_ci_failed: error
+        only_pulls: true
+
+  # Per-module thresholds (aligns with BORIS agent criticality)
+  flags:
+    agents:
+      paths:
+        - src/agents/
+      target: 90%
+      informational: false
+
+    orchestrator:
+      paths:
+        - src/orchestrator/
+      target: 90%
+      informational: false
+
+    utils:
+      paths:
+        - src/utils/
+      target: 80%
+      informational: false
+
+comment:
+  layout: "header, diff, flags, components"
+  behavior: default
+  require_changes: true
+  require_base: true
+  require_head: true
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: true
+      loop: true
+      method: false
+      macro: false
+
+ignore:
+  - "tests/**/*"
+  - "**/__init__.py"
+  - "**/conftest.py"

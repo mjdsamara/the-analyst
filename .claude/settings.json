@@ -1,0 +1,79 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(pip:*)",
+      "Bash(uv:*)",
+      "Bash(pytest:*)",
+      "Bash(git:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Read(*)",
+      "Write(src/**)",
+      "Write(tests/**)",
+      "Write(data/processed/**)",
+      "Write(data/outputs/**)",
+      "Write(memory/**)",
+      "Edit(src/**)",
+      "Edit(tests/**)"
+    ],
+    "deny": [
+      "Write(data/raw/**)",
+      "Edit(data/raw/**)",
+      "Bash(rm -rf:*)",
+      "Bash(sudo:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/PreToolUse/validate-path.sh \"$TOOL_INPUT\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/PreToolUse/check-dangerous-commands.sh \"$TOOL_INPUT\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/PostToolUse/verify-output.sh \"$TOOL_OUTPUT\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/PostToolUse/verify-output.sh \"$TOOL_OUTPUT\""
+          }
+        ]
+      }
+    ]
+  },
+  "tools": {
+    "bash": {
+      "timeout": 120000,
+      "environment": {
+        "PYTHONPATH": "."
+      }
+    }
+  }
+}

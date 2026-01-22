@@ -1,0 +1,17 @@
+{
+  "output": {
+    "default_format": "pdf",
+    "chart_style": "clean",
+    "include_methodology": true
+  },
+  "analysis": {
+    "confidence_level": 0.95,
+    "default_forecast_horizon_days": 30,
+    "require_effect_sizes": true
+  },
+  "notifications": {
+    "terminal": true,
+    "desktop": true,
+    "obsidian": false
+  }
+}
