@@ -41,6 +41,11 @@ The Analyst is an opinionated, AI-powered analytics orchestration system for med
 | Visualization | Create charts | Supervised |
 | Report | Generate formatted outputs | Advisory |
 
+### Utility Layer Agents
+| Agent | Single Job | Autonomy |
+|-------|------------|----------|
+| Workspace Janitor | Recommend cleanup after sessions | Advisory |
+
 ---
 
 ## NEVER-DO List (Hard Constraints)
@@ -66,9 +71,16 @@ HIGH_STAKES_KEYWORDS = [
     "delete", "remove", "drop",           # Data operations
     "send", "share", "export to",         # External sharing
     "production", "stakeholder", "executive",  # High-visibility
-    "forecast", "predict", "model",       # Predictive claims
+    "forecast", "predict",                # Predictive claims
 ]
+
+# Context-sensitive keywords (require action context)
+HIGH_STAKES_CONTEXT_KEYWORDS = {
+    "model": ["build", "train", "create", "deploy", "run", "fit"],
+}
 ```
+
+> **Note**: Keywords are matched with word boundaries to avoid false positives. Context-sensitive keywords like "model" only trigger when used with action verbs (e.g., "build a model" triggers, but "data model" does not).
 
 Also trigger confirmation for:
 - API calls with cost > $5 (configurable via `COST_ALERT_THRESHOLD`)
@@ -187,11 +199,14 @@ the-analyst/
 │   └── outputs/           # Analysis outputs
 └── tests/
     ├── test_agents/       # Agent unit tests
+    ├── test_orchestrator/ # Orchestrator tests
     ├── test_middleware/   # Middleware tests
     ├── test_database/     # Database tests
+    ├── test_models/       # Data model tests
     ├── test_tools/        # Tool tests
     ├── test_utils/        # Utility tests
-    └── test_integration/  # End-to-end tests
+    ├── test_integration/  # End-to-end tests
+    └── test_cli.py        # CLI tests
 ```
 
 ---
@@ -340,6 +355,7 @@ pytest -m asyncio
 ```
 tests/
 ├── conftest.py              # Shared fixtures (mock clients, sample data)
+├── test_cli.py              # CLI command tests
 ├── test_agents/             # Unit tests for each agent
 │   ├── test_retrieval.py
 │   ├── test_transform.py
@@ -349,7 +365,10 @@ tests/
 │   ├── test_insights.py
 │   ├── test_visualization.py
 │   └── test_report.py
+├── test_orchestrator/       # Orchestrator unit tests
+├── test_middleware/         # Middleware tests
 ├── test_database/           # Database integration tests
+├── test_models/             # Data model tests
 ├── test_tools/              # Tool/utility tests
 ├── test_utils/              # Notification, logging tests
 ├── test_integration/        # End-to-end workflow tests
