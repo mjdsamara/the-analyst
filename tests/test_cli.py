@@ -578,9 +578,7 @@ class TestReportFormatting:
                     "recommendation": "Investigate causes",
                 }
             ],
-            "anomalies": [
-                {"description": "Outlier detected", "severity": "high"}
-            ],
+            "anomalies": [{"description": "Outlier detected", "severity": "high"}],
             "actions": [{"action": "Review data quality", "priority": 1}],
         }
 
