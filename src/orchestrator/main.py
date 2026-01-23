@@ -12,10 +12,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, cast
+from typing import Any
 
 from anthropic import AsyncAnthropic
-from anthropic.types import MessageParam
 
 from src.agents.arabic_nlp import ArabicNLPAgent
 from src.agents.base import AgentContext, AgentOption
