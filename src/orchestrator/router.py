@@ -204,7 +204,9 @@ INTENT_AGENTS: dict[IntentType, list[str]] = {
     IntentType.UNKNOWN: [],
 }
 
-# High-stakes keywords
+# High-stakes keywords - these require confirmation before proceeding
+# Keywords are matched with word boundaries to avoid false positives
+# e.g., "model" won't match in "data model" but will match "build a model"
 HIGH_STAKES_KEYWORDS: list[str] = [
     "delete",
     "remove",
@@ -217,8 +219,13 @@ HIGH_STAKES_KEYWORDS: list[str] = [
     "executive",
     "forecast",
     "predict",
-    "model",
 ]
+
+# Context-sensitive keywords that need additional checks
+# "model" is high-stakes only when used as a verb (build/train/create a model)
+HIGH_STAKES_CONTEXT_KEYWORDS: dict[str, list[str]] = {
+    "model": ["build", "train", "create", "deploy", "run", "fit", "predictive"],
+}
 
 
 class IntentRouter:
@@ -241,11 +248,26 @@ class IntentRouter:
             Parsed Intent object
         """
         # Check for high-stakes keywords FIRST (applies to all intents including UNKNOWN)
+        # Use word boundary matching to avoid false positives
         high_stakes_reasons = []
         text_lower = text.lower()
         for keyword in HIGH_STAKES_KEYWORDS:
-            if keyword in text_lower:
+            # Use word boundary regex for accurate matching
+            pattern = rf"\b{re.escape(keyword)}\b"
+            if re.search(pattern, text_lower):
                 high_stakes_reasons.append(f"Contains high-stakes keyword: '{keyword}'")
+
+        # Check context-sensitive keywords (e.g., "model" only when used as action)
+        for keyword, context_words in HIGH_STAKES_CONTEXT_KEYWORDS.items():
+            pattern = rf"\b{re.escape(keyword)}\b"
+            if re.search(pattern, text_lower):
+                # Check if any context word is present
+                for context in context_words:
+                    if re.search(rf"\b{re.escape(context)}\b", text_lower):
+                        high_stakes_reasons.append(
+                            f"Contains high-stakes keyword: '{keyword}' with action context"
+                        )
+                        break
 
         # Score each intent type
         scores: dict[IntentType, float] = {}

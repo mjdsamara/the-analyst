@@ -171,40 +171,14 @@ class Orchestrator:
         return self._format_options_response(intent, options)
 
     async def _generate_options(self, intent: Intent) -> list[AgentOption]:
-        """Generate analysis options based on intent."""
-        # Use LLM to generate contextual options
-        messages = [
-            {
-                "role": "user",
-                "content": f"""Based on this user request, generate 2-3 analysis approaches.
+        """Generate analysis options based on intent.
 
-User request: {self.conversation.messages[-1].content if self.conversation.messages else "No message"}
-
-Intent detected: {intent.type.value}
-Parameters extracted: {intent.parameters}
-
-For each approach, provide:
-1. A short title
-2. Description of what this approach does
-3. 2-3 pros
-4. 2-3 cons
-5. Estimated complexity (low/medium/high)
-
-Recommend one option and explain why.""",
-            }
-        ]
-
-        _response = await self.client.messages.create(
-            model=self.model,
-            max_tokens=2000,
-            temperature=0.7,
-            system=self.system_prompt,
-            messages=cast(list[MessageParam], messages),
-        )
-
-        # Response parsing is delegated to _get_default_options which provides
-        # curated options based on intent type. LLM response available in _response
-        # for future enhancement of dynamic option generation.
+        Returns curated default options for each intent type.
+        These are well-tested options that cover common use cases.
+        """
+        # Return curated options for the intent type
+        # This avoids wasting API tokens on option generation
+        # while still providing good default choices
         return self._get_default_options(intent)
 
     def _get_default_options(self, intent: Intent) -> list[AgentOption]:

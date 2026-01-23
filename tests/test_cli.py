@@ -519,3 +519,98 @@ class TestCLIVerboseMode:
             )
 
             assert "-v" not in result.output or result.exit_code == 0
+
+
+class TestReportFormatting:
+    """Test suite for report formatting helper functions."""
+
+    def test_format_statistical_results_basic(self):
+        """Test formatting basic statistical results."""
+        from src.cli import _format_statistical_results
+
+        results = {
+            "analyses": [
+                {
+                    "analysis_type": "descriptive",
+                    "methodology": "Descriptive statistics",
+                    "interpretation": "Mean = 50.0",
+                    "confidence_level": 0.95,
+                    "limitations": ["Sample size limited"],
+                }
+            ],
+            "summary": "Analysis complete",
+            "recommendations": ["Consider larger sample"],
+        }
+
+        output = _format_statistical_results(results)
+
+        assert "## Statistical Analysis Results" in output
+        assert "### Descriptive" in output
+        assert "Descriptive statistics" in output
+        assert "Mean = 50.0" in output
+        assert "95%" in output
+        assert "Sample size limited" in output
+        assert "### Summary" in output
+        assert "### Recommendations" in output
+
+    def test_format_statistical_results_empty(self):
+        """Test formatting empty statistical results."""
+        from src.cli import _format_statistical_results
+
+        results = {"analyses": [], "summary": "", "recommendations": []}
+
+        output = _format_statistical_results(results)
+
+        assert "## Statistical Analysis Results" in output
+
+    def test_format_insights_results_basic(self):
+        """Test formatting basic insights results."""
+        from src.cli import _format_insights_results
+
+        results = {
+            "executive_summary": "Key findings summarized",
+            "insights": [
+                {
+                    "title": "High Variability",
+                    "finding": "Data shows high variance",
+                    "confidence": "high",
+                    "priority": "critical",
+                    "recommendation": "Investigate causes",
+                }
+            ],
+            "anomalies": [
+                {"description": "Outlier detected", "severity": "high"}
+            ],
+            "actions": [{"action": "Review data quality", "priority": 1}],
+        }
+
+        output = _format_insights_results(results)
+
+        assert "## Key Insights" in output
+        assert "### Executive Summary" in output
+        assert "Key findings summarized" in output
+        assert "#### High Variability" in output
+        assert "Data shows high variance" in output
+        assert "Confidence: high" in output
+        assert "Priority: critical" in output
+        assert "Investigate causes" in output
+        assert "### Anomalies Detected" in output
+        assert "HIGH" in output
+        assert "### Recommended Actions" in output
+        assert "[Priority 1]" in output
+
+    def test_format_insights_results_empty(self):
+        """Test formatting empty insights results."""
+        from src.cli import _format_insights_results
+
+        results = {
+            "executive_summary": "No significant findings",
+            "insights": [],
+            "anomalies": [],
+            "actions": [],
+        }
+
+        output = _format_insights_results(results)
+
+        assert "## Key Insights" in output
+        assert "No significant findings" in output

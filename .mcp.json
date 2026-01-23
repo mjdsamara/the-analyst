@@ -1,11 +1,6 @@
 {
-  "mcpServers": {
-    "obsidian": {
-      "command": "npx",
-      "args": ["-y", "@anthropic/mcp-server-obsidian"],
-      "env": {
-        "OBSIDIAN_VAULT_PATH": "/Users/majd.samara/Documents/Obsidian-Vault"
-      }
-    }
+  "mcpServers": {},
+  "_comments": {
+    "global_servers": "playwright, fetch, obsidian, sentry, github are available globally from ~/.claude/.mcp.json"
   }
 }

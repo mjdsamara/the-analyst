@@ -8,8 +8,10 @@ and interactive exploration.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.console import Console
@@ -23,6 +25,94 @@ app = typer.Typer(
     add_completion=False,
 )
 console = Console()
+
+
+def _format_statistical_results(results: dict[str, Any]) -> str:
+    """Format statistical results dict as readable markdown."""
+    lines = ["## Statistical Analysis Results", ""]
+
+    for analysis in results.get("analyses", []):
+        analysis_type = analysis.get("analysis_type", "unknown").replace("_", " ").title()
+        lines.extend([f"### {analysis_type}", ""])
+
+        # Methodology
+        if methodology := analysis.get("methodology"):
+            lines.extend(["**Methodology:**", methodology, ""])
+
+        # Interpretation
+        if interpretation := analysis.get("interpretation"):
+            lines.extend(["**Interpretation:**", interpretation, ""])
+
+        # Confidence Level
+        if confidence := analysis.get("confidence_level"):
+            lines.append(f"**Confidence Level:** {confidence:.0%}")
+            lines.append("")
+
+        # Limitations
+        if limitations := analysis.get("limitations"):
+            lines.append("**Limitations:**")
+            for lim in limitations:
+                lines.append(f"- {lim}")
+            lines.append("")
+
+    # Summary
+    if summary := results.get("summary"):
+        lines.extend(["### Summary", summary, ""])
+
+    # Recommendations
+    if recommendations := results.get("recommendations"):
+        lines.append("### Recommendations")
+        for rec in recommendations:
+            lines.append(f"- {rec}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def _format_insights_results(results: dict[str, Any]) -> str:
+    """Format insights results dict as readable markdown."""
+    lines = ["## Key Insights", ""]
+
+    # Executive Summary
+    if summary := results.get("executive_summary"):
+        lines.extend(["### Executive Summary", summary, ""])
+
+    # Insights
+    for insight in results.get("insights", []):
+        title = insight.get("title", "Insight")
+        finding = insight.get("finding", "")
+        confidence = insight.get("confidence", "medium")
+        priority = insight.get("priority", "medium")
+
+        lines.append(f"#### {title}")
+        lines.append(f"*Confidence: {confidence} | Priority: {priority}*")
+        lines.append("")
+        lines.append(finding)
+        lines.append("")
+
+        if recommendation := insight.get("recommendation"):
+            lines.append(f"**Recommendation:** {recommendation}")
+            lines.append("")
+
+    # Anomalies
+    if anomalies := results.get("anomalies"):
+        lines.append("### Anomalies Detected")
+        for anomaly in anomalies:
+            desc = anomaly.get("description", "Unknown anomaly")
+            severity = anomaly.get("severity", "medium")
+            lines.append(f"- **{severity.upper()}:** {desc}")
+        lines.append("")
+
+    # Recommended Actions
+    if actions := results.get("actions"):
+        lines.append("### Recommended Actions")
+        for action in actions:
+            act = action.get("action", "")
+            priority = action.get("priority", 3)
+            lines.append(f"- [Priority {priority}] {act}")
+        lines.append("")
+
+    return "\n".join(lines)
 
 
 def setup_logging(verbose: bool = False) -> None:
@@ -125,20 +215,18 @@ def analyze(
             result = await orchestrator.generate_insights()
             console.print(Markdown(result))
 
-        # Save to output
+        # Save to output with proper formatting
         insights_results = orchestrator._agent_context.get_data("insights_results")
         statistical_results = orchestrator._agent_context.get_data("statistical_results")
 
         report_content = ["# Analysis Report", ""]
 
         if statistical_results:
-            report_content.append("## Statistical Analysis")
-            report_content.append(str(statistical_results))
+            report_content.append(_format_statistical_results(statistical_results))
             report_content.append("")
 
         if insights_results:
-            report_content.append("## Insights")
-            report_content.append(str(insights_results))
+            report_content.append(_format_insights_results(insights_results))
 
         output.write_text("\n".join(report_content))
         console.print(f"\n[bold green]Report saved to:[/bold green] {output}")
